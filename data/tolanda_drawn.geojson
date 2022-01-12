@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"name": "tolanda_drawn",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "id": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -121.331159569755926, 40.422847081709328 ], [ -121.331588412862899, 40.422964239877729 ], [ -121.331272306861365, 40.423375398732873 ], [ -121.330861148006221, 40.423271503753348 ], [ -121.331159569755926, 40.422847081709328 ] ] ] ] } }
+]
+}

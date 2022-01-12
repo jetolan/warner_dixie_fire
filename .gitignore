@@ -1,0 +1,6 @@
+*.zip
+data/tmp/
+data/NAIP/manifest.txt
+fig/
+doc/
+ 
