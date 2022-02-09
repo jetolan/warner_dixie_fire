@@ -11,7 +11,7 @@ METERS_IN_FT = .3048
 M2_IN_ACRE = 4046.86
 
 
-def plot_contour(outfile, aoi, figdir, meters=False):
+def plot_contour(outfile, aoi, figdir, meters=False, cont=None, intv=None, linethick=1, cfont=5):
     # contour figure
     with rasterio.open(outfile, 'r') as src:
         data = src.read(1)
@@ -33,26 +33,26 @@ def plot_contour(outfile, aoi, figdir, meters=False):
 
     if meters:
         z = data
-        cont = 0.5
-        intv = 5
+        cont = cont or 0.5
+        intv = intv or 5
 
     else:
         z = data/METERS_IN_FT
-        cont = 1
-        intv = 10
+        cont = cont or 1
+        intv = intv or 10
 
     lowm = np.floor(np.min(z))
     highm = np.ceil(np.max(z))
     levels = np.arange(lowm-lowm % intv, highm, cont)
-    thick = np.ones(len(levels))/2
-    thick[np.squeeze((np.argwhere(levels % intv == 0)))] = 1
+    thick = np.ones(len(levels))/2 * linethick
+    thick[np.squeeze((np.argwhere(levels % intv == 0)))] = 1 * linethick
     labels = np.arange(lowm-lowm % intv, highm, intv).astype(int)
 
     fig, ax = plt.subplots(1, 1)
     fig.set_size_inches((12, 12))
     contours = plt.contour(
         X, Y, z, levels, colors='black', linewidths=thick)
-    plt.clabel(contours, labels, inline=1, fontsize=5, fmt='%1.0f')
+    plt.clabel(contours, labels, inline=1, fontsize=cfont, fmt='%1.0f')
     plt.xlabel('East')
     plt.ylabel('North')
     # add prop line
@@ -122,13 +122,14 @@ def plot_ba(ba_file, aoi, figdir):
     fig.set_dpi(300)
     with rasterio.open(ba_file, 'r') as src:
         fig, ax = plt.subplots(1, 1)
-        image_hidden = ax.imshow(src.read(1), cmap='gray')
+        image_hidden = ax.imshow(src.read(1), cmap='gray', vmin=0)
         fig, ax = plt.subplots(1, 1)
         fig.set_size_inches((12, 12))
         fig.set_dpi(300)
         rasterio.plot.show(src, ax=ax, cmap='gray',
-                           interpolation='none')
+                           interpolation='none', vmin=0)
         fig.colorbar(image_hidden, ax=ax)
+        ax.set_title('Basal Area Loss [percent]')
         plt.xlabel('East')
         plt.ylabel('North')
     aoi.geometry.boundary.plot(
@@ -164,15 +165,7 @@ def plot_regen(slope_file, ba_file, naip_file, aoi, figdir):
             src, poly, nodata=np.NaN, crop=True)
         res = src.res
         meta = src.meta
-        """
-        xx = rasterio.transform.xy(trans_slope,
-                                   np.arange(0, meta['width']),
-                                   np.zeros(meta['width']))[1]
-        yy = rasterio.transform.xy(trans_slope,
-                                   np.zeros(meta['height']),
-                                   np.arange(0, meta['height']),
-                                   )[0]
-        """
+
     with rasterio.open(ba_file, 'r') as src:
         ba, trans_ba = rasterio.mask.mask(
             src, poly, nodata=np.NaN, crop=True)
@@ -241,7 +234,7 @@ def plot_regen(slope_file, ba_file, naip_file, aoi, figdir):
     vect = vect[np.isfinite(vect)]
     maxs = np.max(vect)
     step = 5
-    aa, bb = np.histogram(vect, bins=np.arange(-5, maxs, step))
+    aa, bb = np.histogram(vect, bins=np.arange(-5, maxs+step, step))
     ax2.bar(bb[: -1], aa*pixel_acres, width=step-1)
     ax2.set_xlabel('slope [degrees]')
     ax2.set_ylabel('acres')
@@ -250,9 +243,9 @@ def plot_regen(slope_file, ba_file, naip_file, aoi, figdir):
     vect = ba.flatten()
     vect = vect[np.isfinite(vect)]
     maxs = np.max(vect)
-    mins = np.min(vect)
+    mins = np.max((np.min(vect), 0))
     step = 5
-    aa, bb = np.histogram(vect, bins=np.arange(mins, maxs, step))
+    aa, bb = np.histogram(vect, bins=np.arange(mins, maxs+step, step))
     ax3.bar(bb[: -1], aa*pixel_acres, width=step-1)
     ax3.set_xlabel('Basal area (BA) loss [%]')
     ax3.set_ylabel('acres')
@@ -273,4 +266,5 @@ def plot_regen(slope_file, ba_file, naip_file, aoi, figdir):
     figfile = f'{figdir}/ba_slope_hist.png'
     plt.savefig(figfile)
     plt.close()
+
     return figfile, cell_text

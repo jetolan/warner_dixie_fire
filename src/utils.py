@@ -11,12 +11,12 @@ def geotiff_to_utm(in_file, out_file, dst_crs, resolution=None, resampling=Resam
             src.crs, dst_crs, src.width, src.height, *src.bounds,
             resolution=resolution)
         meta.update({
+            'driver': 'GTiff',
             'crs': dst_crs,
             'transform': transform,
             'width': width,
             'height': height
         })
-
         with rasterio.open(out_file, 'w', **meta) as dst:
             for i in range(1, src.count + 1):
                 reproject(

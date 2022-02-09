@@ -152,7 +152,7 @@ def get_naip_quads(topo_quads, outfile_name=None, replace=False):
 
     all_dates = ''
     all_quads = ''
-    downloaded = []
+    out_files = []
 
     for ind, row in enumerate(topo_quads):
         if isinstance(row['state_abbr'], str):
@@ -187,11 +187,10 @@ def get_naip_quads(topo_quads, outfile_name=None, replace=False):
         all_dates += date+'_'
         all_quads += qd_num+'_'
 
-        out_files = []
         for ff in files:
             out_files.append(download(ff, replace=replace))
-
-        return out_files
+    str_out = f"{all_quads}_{all_dates}"
+    return out_files, str_out
 
 
 def state_to_abbr(state):
@@ -295,24 +294,22 @@ def get_raster(gdf):
         shapes = [row.geometry]
         geojson = shape_to_geojson(shapes, crs='epsg:4326')
         topo_quads = get_usgs_topo_quad(geojson)
-        files = get_naip_quads(topo_quads)
-        for ff in files:
-            if '_ne' in ff:
-                merge_file = ff.replace('_ne', '')
+        files, str_out = get_naip_quads(topo_quads)
+        merge_file = f"{os.path.dirname(files[0])}/{str_out}.tif"
         if not os.path.exists(merge_file):
             merge_rasters(files, merge_file)
         files_out.append(merge_file)
     return files_out
 
 
-def get_masked_raster(gdf, dst_crs="epsg:32610"):
+def get_masked_raster(gdf, dst_crs="epsg:32610", masked_file=None):
     filename = get_raster(gdf)[0]
     file_utm = filename.replace('.tif', '_utm.tif')
     gdf_utm = gdf.to_crs(dst_crs)
     poly_utm = gdf_utm.unary_union
     if not os.path.exists(file_utm):
         reutil.geotiff_to_utm(filename, file_utm, dst_crs)
-    masked_file = filename.replace('.tif', '_masked.tif')
+    masked_file = masked_file or filename.replace('.tif', '_masked.tif')
     reutil.crop_to_aoi(file_utm, [poly_utm], masked_file, nodata=0)
     return masked_file
 
@@ -324,5 +321,5 @@ if __name__ == "__main__":
     lat = 47.60995713411172
     lon = -122.33602664031982
     gdf = gp.GeoDataFrame(
-        geometry=[shapely.geometry.Point(lon, lat).buffer(0.01)], crs='epsg:32610')
+        geometry=[shapely.geometry.Point(lon, lat).buffer(0.01)], crs='epsg:4326')
     naip_file = get_masked_raster(gdf)

@@ -49,17 +49,32 @@ def process_apn(sch):
                           resolution=res, resampling=Resampling.nearest)
 
     # naip
-    naip_filename = naip.get_masked_raster(sch)
+    naip_file = f'{figdir}/naip.tif'
+    if not os.path.exists(naip_file):
+        naip_file = naip.get_masked_raster(
+            sch, masked_file=naip_file)
+    else:
+        print(f"{naip_file} exists, skipping creation...")
 
     # plotting
     # ------------------------------
-    plotting.plot_contour(demfile, sch_utm, figdir)
-    # plotting.plot_hill(hillshade_file, sch_utm, figdir)
+    area_km2 = (sch_utm.area/1e6).iloc[0]
+    if area_km2 > 10:
+        intv, cont, linethick, cfont = 50, 10, 0.25, 2
+    elif area_km2 > 0.1 and area_km2 <= 10:
+        intv, cont, linethick, cfont = 20, 4, 0.25, 4
+    else:
+        intv, cont, linethick, cfont = 10, 1, 1, 5
+
+    plotting.plot_contour(demfile, sch_utm, figdir,
+                          intv=intv, cont=cont, linethick=linethick, cfont=cfont)
+    plotting.plot_hill(hillshade_file, sch_utm, figdir)
     plotting.plot_slope(slope_file, sch_utm, figdir)
     plotting.plot_ba(ba_utm_crop_upsample, sch_utm, figdir)
-    plotting.plot_naip(naip_filename, figdir)
+    plotting.plot_naip(naip_file, figdir)
+
     _, cell_text = plotting.plot_regen(slope_file, ba_utm_crop_upsample,
-                                       naip_filename, sch_utm, figdir)
+                                       naip_file, sch_utm, figdir)
 
     # collect in document
     document.make_document(figdir)
@@ -78,26 +93,31 @@ def process_apn(sch):
 if __name__ == "__main__":
 
     parcel_file = '../data/plumas_parsels.geojson'
-    warner_valley_file = "../data/warner_valley_bounds.geojson"
+    #warner_valley_file = "../data/warner_valley_bounds.geojson"
+    warner_valley_file = "../data/warner_watershed.geojson"
 
     # ---------------------------------
     gdf = gp.read_file(parcel_file)
     val = gp.read_file(warner_valley_file)
-    val_gdf = gp.sjoin(gdf, val, how='inner', op='within')
-    val['Name'] = 'All_Valley'
+    val_gdf = gp.sjoin(gdf, val, how='inner', op='intersects')
+    val['Name'] = 'Warner_Watershed'
     val_gdf = pd.concat([val, val_gdf])
+    val_gdf.crs = 'epsg:4326'
     apns = val_gdf.Name.to_list()
 
-    # name = 'Tolanda'
+    # 'Tolanda'
     # apns = ['011180013']
 
-    # name = 'Williams'
+    # 'Williams'
     # apns = ['011180014']
 
-    # name = 'Farmers'
+    # 'Farmers'
     # apns = ['011130013']
 
-    for ii, apn in enumerate(apns[1:]):
+    # all watershed
+    # apns = ['Warner_Watershed']
+
+    for ii, apn in enumerate(apns):
         print(f'Processing {apn}')
         sch = val_gdf[val_gdf['Name'] == apn]
         try:
@@ -107,7 +127,7 @@ if __name__ == "__main__":
             else:
                 df = pd.concat([df, sub])
         except Exception as e:
-            print(e.message)
+            print(e)
 
     table.to_table(df)
-    folium_map.warner(df)
+    folium_map.warner(val_gdf)

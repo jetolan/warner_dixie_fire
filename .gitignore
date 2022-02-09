@@ -1,6 +1,8 @@
 *.zip
+*.DS_Store
 data/tmp/
 data/NAIP/manifest.txt
 fig/
 doc/
- 
+src/__pycache__/ 
+Icon*
