@@ -71,8 +71,7 @@ def process_apn(sch):
     plotting.plot_hill(hillshade_file, sch_utm, figdir)
     plotting.plot_slope(slope_file, sch_utm, figdir)
     plotting.plot_ba(ba_utm_crop_upsample, sch_utm, figdir)
-    plotting.plot_naip(naip_file, figdir)
-
+    plotting.plot_naip(naip_file, sch_utm, figdir)
     _, cell_text = plotting.plot_regen(slope_file, ba_utm_crop_upsample,
                                        naip_file, sch_utm, figdir)
 
@@ -81,19 +80,31 @@ def process_apn(sch):
 
     # return dict of values
     all_75 = cell_text[0][3]+cell_text[1][3]+cell_text[2][3]
-    low75 = cell_text[2][3]
+
     sub = pd.DataFrame({'APN': sch.Name.iloc[0],
-                        'BA>75%': all_75,
-                        'BA>75%,SLOPE<15%': low75,
+                        'BA>75% All Slopes': all_75,
+                        'BA>75% & S>30': cell_text[0][3],
+                        'BA>75% & 30>S>15': cell_text[1][3],
+                        'BA>75% & S<15': cell_text[2][3],
+                        '50%<BA<75% & S>30': cell_text[0][2],
+                        '50%<BA<75% & 30>S>15': cell_text[1][2],
+                        '50%<BA<75% & S<15': cell_text[2][2],
+                        '25%<BA<50% & S>30': cell_text[0][1],
+                        '25%<BA<50% & 30>S>15': cell_text[1][1],
+                        '25%<BA<50% & S<15': cell_text[2][1],
+                        'BA<25% & S>30': cell_text[0][0],
+                        'BA<25% & 30>S>15': cell_text[1][0],
+                        'BA<25% & S<15': cell_text[2][0],
                         'geometry': sch.geometry.iloc[0],
-                        }, index=[sch.Name.iloc[0]])
+                        }, index=[sch.Name.iloc[0]]
+                       )
     return sub
 
 
 if __name__ == "__main__":
 
     parcel_file = '../data/plumas_parsels.geojson'
-    #warner_valley_file = "../data/warner_valley_bounds.geojson"
+    # warner_valley_file = "../data/warner_valley_bounds.geojson"
     warner_valley_file = "../data/warner_watershed.geojson"
 
     # ---------------------------------

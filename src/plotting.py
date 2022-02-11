@@ -3,6 +3,7 @@ import rasterio
 import rasterio.plot
 import rasterio.mask
 import matplotlib.pyplot as plt
+import matplotlib.colors as colors
 from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
 from matplotlib.gridspec import GridSpec
 
@@ -55,6 +56,7 @@ def plot_contour(outfile, aoi, figdir, meters=False, cont=None, intv=None, linet
     plt.clabel(contours, labels, inline=1, fontsize=cfont, fmt='%1.0f')
     plt.xlabel('East')
     plt.ylabel('North')
+    plt.title(f'Contour map of Parcel #{aoi.Name.iloc[0]}')
     # add prop line
     aoi.geometry.boundary.plot(
         color=None, edgecolor='k', linewidth=2, ax=ax)
@@ -86,6 +88,7 @@ def plot_hill(hillshade_file, aoi, figdir):
     ax.set_title('Hillshade')
     plt.xlabel('East')
     plt.ylabel('North')
+    plt.title(f'Hillshade of Parcel #{aoi.Name.iloc[0]}')
     figfile = f'{figdir}/hillshade.png'
     plt.savefig(figfile)
     plt.close()
@@ -107,6 +110,7 @@ def plot_slope(slope_file, aoi, figdir):
         ax.set_title('Slope [degrees]')
         plt.xlabel('East')
         plt.ylabel('North')
+        ax.set_title(f'Slope [degrees] of Parcel #{aoi.Name.iloc[0]}')
     aoi.geometry.boundary.plot(
         color=None, edgecolor='r', linewidth=2, ax=ax)
     figfile = f'{figdir}/slope.png'
@@ -116,22 +120,33 @@ def plot_slope(slope_file, aoi, figdir):
 
 
 def plot_ba(ba_file, aoi, figdir):
+
+    def truncate_colormap(cmap, minval=0.0, maxval=1.0, n=100):
+        new_cmap = colors.LinearSegmentedColormap.from_list(
+            'trunc({n},{a:.2f},{b:.2f})'.format(
+                n=cmap.name, a=minval, b=maxval),
+            cmap(np.linspace(minval, maxval, n)))
+        return new_cmap
+    cmap = plt.get_cmap('hot')
+    new_cmap = truncate_colormap(cmap, 0.0, 0.8)
+
     # ba figure
     fig, ax = plt.subplots(1, 1)
     fig.set_size_inches((12, 12))
     fig.set_dpi(300)
     with rasterio.open(ba_file, 'r') as src:
         fig, ax = plt.subplots(1, 1)
-        image_hidden = ax.imshow(src.read(1), cmap='gray', vmin=0)
+        image_hidden = ax.imshow(src.read(1), cmap=new_cmap, vmin=0)
         fig, ax = plt.subplots(1, 1)
         fig.set_size_inches((12, 12))
         fig.set_dpi(300)
-        rasterio.plot.show(src, ax=ax, cmap='gray',
+        rasterio.plot.show(src, ax=ax, cmap=new_cmap,
                            interpolation='none', vmin=0)
         fig.colorbar(image_hidden, ax=ax)
         ax.set_title('Basal Area Loss [percent]')
         plt.xlabel('East')
         plt.ylabel('North')
+        plt.title(f'Basal Area loss percentage of Parcel #{aoi.Name.iloc[0]}')
     aoi.geometry.boundary.plot(
         color=None, edgecolor='r', linewidth=2, ax=ax)
     figfile = f'{figdir}/ba.png'
@@ -140,7 +155,7 @@ def plot_ba(ba_file, aoi, figdir):
     return figfile
 
 
-def plot_naip(naip_file, figdir):
+def plot_naip(naip_file, aoi, figdir):
     fig, ax = plt.subplots(1, 1)
     fig.set_size_inches((12, 12))
     fig.set_dpi(300)
@@ -152,6 +167,9 @@ def plot_naip(naip_file, figdir):
         plt.imshow(arr, extent=extent)
         plt.xlabel('East')
         plt.ylabel('North')
+        plt.title(f'RGB Aerial Imagery of Parcel #{aoi.Name.iloc[0]}')
+    aoi.geometry.boundary.plot(
+        color=None, edgecolor='r', linewidth=2, ax=ax)
     figfile = f'{figdir}/naip.png'
     plt.savefig(figfile)
     plt.close()
@@ -264,6 +282,18 @@ def plot_regen(slope_file, ba_file, naip_file, aoi, figdir):
               fontsize=18,
               )
     figfile = f'{figdir}/ba_slope_hist.png'
+    plt.savefig(figfile)
+    plt.close()
+
+    # also plot slope*ba as stand alone figure
+    fig, ax = plt.subplots(1, 1)
+    fig.set_size_inches((12, 12))
+    fig.set_dpi(300)
+    plt.imshow(colorarr, extent=extent)
+    plt.xlabel('East')
+    plt.ylabel('North')
+    plt.title(f'Slope * Basal Area loss of Parcel #{aoi.Name.iloc[0]}')
+    figfile = f'{figdir}/ba_slope.png'
     plt.savefig(figfile)
     plt.close()
 

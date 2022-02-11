@@ -39,7 +39,7 @@ def warner(gdf):
     crop_file = mer_file.replace('.tif', '_projected.tif')
     aoi = gdf.to_crs(web_crs).unary_union
     utils.crop_to_aoi(
-        mer_file, [box(*aoi.buffer(10000).bounds)], crop_file, nodata=255)
+        mer_file, [box(*aoi.buffer(20000).bounds)], crop_file, nodata=255)
     with rasterio.open(crop_file) as src:
         dataimage = src.read(1)/255
         bounds = src.bounds
