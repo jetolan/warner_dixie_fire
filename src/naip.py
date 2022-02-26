@@ -288,7 +288,7 @@ def merge_rasters(files, outfile='test.tiff'):
     return outfile
 
 
-def get_raster(gdf):
+def get_raster(gdf, check_utm=False):
     files_out = []
     for i, row in gdf.iterrows():
         shapes = [row.geometry]
@@ -296,14 +296,17 @@ def get_raster(gdf):
         topo_quads = get_usgs_topo_quad(geojson)
         files, str_out = get_naip_quads(topo_quads)
         merge_file = f"{os.path.dirname(files[0])}/{str_out}.tif"
-        if not os.path.exists(merge_file):
+        utm_file = merge_file.replace('.tif', '_utm.tif')
+        if check_utm and os.path.exists(utm_file):
+            print('utm_file exists, skipping creation of merge file')
+        elif not os.path.exists(merge_file):
             merge_rasters(files, merge_file)
         files_out.append(merge_file)
     return files_out
 
 
 def get_masked_raster(gdf, dst_crs="epsg:32610", masked_file=None):
-    filename = get_raster(gdf)[0]
+    filename = get_raster(gdf, check_utm=True)[0]
     file_utm = filename.replace('.tif', '_utm.tif')
     gdf_utm = gdf.to_crs(dst_crs)
     poly_utm = gdf_utm.unary_union

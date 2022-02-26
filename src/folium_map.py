@@ -10,7 +10,7 @@ from shapely.geometry import box
 import matplotlib.cm as cm
 
 
-def warner(gdf):
+def warner(gdf, crop=True):
     m = folium.Map(location=[40.419097, -121.330998],
                    zoom_start=14, tiles='CartoDB positron')
     tiles = folium.TileLayer(
@@ -36,12 +36,18 @@ def warner(gdf):
     mer_file = f"/tmp/{os.path.basename(ba_file)}"
     web_crs = "epsg:3857"
     utils.geotiff_to_utm(ba_file, mer_file, dst_crs=web_crs)
-    crop_file = mer_file.replace('.tif', '_projected.tif')
-    aoi = gdf.to_crs(web_crs).unary_union
-    utils.crop_to_aoi(
-        mer_file, [box(*aoi.buffer(20000).bounds)], crop_file, nodata=255)
+    if crop:
+        crop_file = mer_file.replace('.tif', '_projected.tif')
+        aoi = gdf.to_crs(web_crs).unary_union
+        utils.crop_to_aoi(
+            mer_file, [box(*aoi.buffer(20000).bounds)], crop_file, nodata=255)
+    else:
+        crop_file = mer_file
     with rasterio.open(crop_file) as src:
-        dataimage = src.read(1)/255
+        dataimage = src.read(1)
+        dataimage[dataimage < 0] = 0
+        dataimage[dataimage == 255] = 0
+        dataimage = dataimage/255
         bounds = src.bounds
     proj = pyproj.Transformer.from_crs(3857, 4326, always_xy=True)
     xmin, ymin = proj.transform(bounds[0], bounds[1])

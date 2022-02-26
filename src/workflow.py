@@ -77,7 +77,7 @@ def process_apn(sch):
                                        naip_file, sch_utm, figdir)
 
     # collect in document
-    # document.make_document(figdir)
+    document.make_document(figdir)
 
     # return dict of values
     all_75 = cell_text[0][3]+cell_text[1][3]+cell_text[2][3]
@@ -96,7 +96,7 @@ def process_apn(sch):
                         'BA<25 and S>30': cell_text[0][0],
                         'BA<25 and 30>S>15': cell_text[1][0],
                         'BA<25 and S<15': cell_text[2][0],
-                        'geometry': sch.geometry.iloc[0],
+                        'geometry': [sch.geometry.iloc[0]],
                         }, index=[sch.Name.iloc[0]]
                        )
     return sub
@@ -111,10 +111,22 @@ if __name__ == "__main__":
     # ---------------------------------
     gdf = gp.read_file(parcel_file)
     val = gp.read_file(warner_valley_file)
+    # ---------------------------------
+    """
+    # this produces all parcels touching the watershed
     val_gdf = gp.sjoin(gdf, val, how='inner', op='intersects')
     val['Name'] = 'Warner_Watershed'
     val_gdf = pd.concat([val, val_gdf])
     val_gdf.crs = 'epsg:4326'
+    """
+    # ---------------------------------
+    # this produces all area interior to the watershed
+    val_gdf = gp.overlay(gdf, val, how='intersection')
+    val['Name'] = 'Warner_Watershed'
+    extra = gp.overlay(val, val_gdf, how='difference')
+    val_gdf = val_gdf.append(extra)
+
+    # ---------------------------------
     apns = val_gdf.Name.to_list()
 
     # 'Tolanda'
@@ -132,14 +144,11 @@ if __name__ == "__main__":
     for ii, apn in enumerate(apns):
         print(f'Processing {apn}')
         sch = val_gdf[val_gdf['Name'] == apn]
-        try:
-            sub = process_apn(sch)
-            if ii == 0:
-                df = sub
-            else:
-                df = pd.concat([df, sub])
-        except Exception as e:
-            print(e)
+        sub = process_apn(sch)
+        if ii == 0:
+            df = sub
+        else:
+            df = pd.concat([df, sub])
 
     table.to_table(df)
     folium_map.warner(val_gdf)
