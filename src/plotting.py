@@ -9,7 +9,7 @@ from matplotlib.gridspec import GridSpec
 
 
 METERS_IN_FT = .3048
-M2_IN_ACRE = 4046.86
+M2_IN_ACRE = 4046.8564224
 
 
 def plot_contour(outfile, aoi, figdir, meters=False, cont=None, intv=None, linethick=1, cfont=5):
@@ -195,17 +195,19 @@ def plot_regen(slope_file, ba_file, naip_file, aoi, figdir):
     ba = ba[0, 0:xa, 0:ya]
 
     # categories of slope
-    slope30 = slope > 30
-    slope15 = (slope > 15) & (slope < 30)
+    slope30 = slope >= 30
+    slope15 = (slope >= 15) & (slope < 30)
     slope0 = slope < 15
-    ba75 = ba > 75
-    ba50 = (ba > 50) & (ba < 75)
-    ba25 = (ba > 25) & (ba < 50)
+    ba75 = ba >= 75
+    ba50 = (ba >= 50) & (ba < 75)
+    ba25 = (ba >= 25) & (ba < 50)
     ba0 = ba < 25
 
     # categories of slope*ba
     pixel_acres = res[0]*res[1]*(1/M2_IN_ACRE)
-    total_acres = slope.shape[0]*slope.shape[1]*pixel_acres
+    acres_raster = np.isfinite(slope).astype('bool').sum()*pixel_acres
+    acres_poly = aoi.unary_union.area/M2_IN_ACRE
+    fac = acres_poly/acres_raster
 
     colorarr = np.zeros(slope.shape+(3,)).astype(np.uint8)
     colorarr[~np.isfinite(slope), :] = [255, 255, 255]
@@ -226,7 +228,7 @@ def plot_regen(slope_file, ba_file, naip_file, aoi, figdir):
             color = np.array(cm(val)[0:3])
             cell_colors[ii, jj, :] = color
             colorarr[(ss*bb).astype('bool'), :] = (color*255).astype(np.uint8)
-            cc.append(np.round(np.sum(ss*bb), 2))
+            cc.append(np.round(np.sum(ss*bb)*fac, 2))
         cell_text.append(cc)
 
     # plot map
