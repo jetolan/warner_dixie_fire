@@ -126,6 +126,9 @@ if __name__ == "__main__":
     extra = gp.overlay(val, val_gdf, how='difference')
     val_gdf = val_gdf.append(extra)
 
+    #These overlap with 011100025
+    val_gdf = val_gdf[~(val_gdf['Name'].isin(['011100007', '011100008']))]
+    
     # ---------------------------------
     apns = val_gdf.Name.to_list()
 
@@ -152,3 +155,4 @@ if __name__ == "__main__":
 
     table.to_table(df)
     folium_map.warner(val_gdf)
+

@@ -10,7 +10,7 @@ from shapely.geometry import box
 import matplotlib.cm as cm
 
 
-def warner(gdf, crop=True):
+def warner(gdf, crop=True, include_pdf=False):
     m = folium.Map(location=[40.419097, -121.330998],
                    zoom_start=14, tiles='CartoDB positron')
     tiles = folium.TileLayer(
@@ -27,9 +27,12 @@ def warner(gdf, crop=True):
         geo_j = sim_geo.to_json()
         geo_j = folium.GeoJson(data=geo_j,
                                style_function=lambda x: {'fillColor': 'white'})
-
-        folium.Popup(
-            f"<a href = 'doc/{r.Name}.pdf'> {r.Name}</a>").add_to(geo_j)
+        if include_pdf:
+            folium.Popup(
+                f"<a href = 'doc/{r.Name}.pdf'> {r.Name}</a>").add_to(geo_j)
+        else:
+            folium.Popup(
+                f"{r.Name}").add_to(geo_j)
         geo_j.add_to(m)
 
     ba_file = "../data/ca3987612137920210714_20201012_20211015_ravg_data/ca3987612137920210714_20201012_20211015_rdnbr_ba.tif"
@@ -68,8 +71,21 @@ if __name__ == "__main__":
     warner_valley_file = "../data/warner_watershed.geojson"
     gdf = gp.read_file(parcel_file)
     val = gp.read_file(warner_valley_file)
+    """
+    # ---------------------------------
+    # this produces all parcels touching the watershed
     val_gdf = gp.sjoin(gdf, val, how='inner', op='intersects')
     all_valley = gp.GeoDataFrame({'Name': 'Warner_Watershed'}, geometry=[
         val_gdf.unary_union], crs=val.crs, index=[0])
     val_gdf = pd.concat([all_valley, val_gdf])
+    """
+    # ---------------------------------
+    # this produces all area interior to the watershed
+    val_gdf = gp.overlay(gdf, val, how='intersection')
+    val['Name'] = 'Warner_Watershed'
+    extra = gp.overlay(val, val_gdf, how='difference')
+    val_gdf = val_gdf.append(extra)
+
+    #These overlap with 011100025
+    val_gdf = val_gdf[~(val_gdf['Name'].isin(['011100007', '011100008']))]
     warner(val_gdf)

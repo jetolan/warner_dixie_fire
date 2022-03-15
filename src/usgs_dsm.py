@@ -135,7 +135,7 @@ def dsm_products(outfile, hillshade=True, slope=True):
             hill = ls.hillshade(data, vert_exag=1)
             hillshade_file = outfile.replace('.tif', '_hillshade.tif')
             with rasterio.open(hillshade_file, 'w', **meta) as dst:
-                dst.write(hill, 1)
+                dst.write(hill.astype(meta['dtype']), 1)
 
         # save the slope tiff
         if slope:

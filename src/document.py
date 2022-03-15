@@ -13,7 +13,10 @@ def make_document(figdir):
                           stdout=subprocess.PIPE,
                           text=True)
     apn = os.path.basename(figdir)
-    shutil.copy('document.pdf', f'../../doc/{apn}.pdf')
+    docdir = '../../doc/'
+    if not os.path.exists(docdir):
+        os.makedirs(docdir)
+    shutil.copy('document.pdf', f'{docdir}/{apn}.pdf')
     os.chdir(cwd)
     return texpath
 
